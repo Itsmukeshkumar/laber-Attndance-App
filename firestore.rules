@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Contractors Collection
+    match /contractors/{contractorId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == contractorId;
+    }
+
+    // Projects Collection
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.resource.data.contractorId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.contractorId == request.auth.uid;
+    }
+
+    // Labours Collection
+    match /labours/{labourId} {
+      // Contractor can read/write his labours; Labour can only read his own record
+      allow read: if isAuthenticated() && (
+        resource.data.contractorId == request.auth.uid ||
+        resource.data.labourId == request.auth.uid
+      );
+      allow write: if isAuthenticated() && (
+        request.resource.data.contractorId == request.auth.uid ||
+        (resource != null && resource.data.contractorId == request.auth.uid)
+      );
+    }
+
+    // Attendance Collection
+    match /attendance/{attendanceId} {
+      // Contractor can read/write; Labour can ONLY read his own attendance records
+      allow read: if isAuthenticated() && (
+        resource.data.contractorId == request.auth.uid ||
+        resource.data.labourId == request.auth.uid
+      );
+      // Labour CANNOT write or modify attendance
+      allow write: if isAuthenticated() && (
+        request.resource.data.contractorId == request.auth.uid ||
+        (resource != null && resource.data.contractorId == request.auth.uid)
+      );
+    }
+
+    // Payments Collection
+    match /payments/{paymentId} {
+      // Contractor can read/write; Labour can only read his own payment transactions
+      allow read: if isAuthenticated() && (
+        resource.data.contractorId == request.auth.uid ||
+        resource.data.labourId == request.auth.uid
+      );
+      // Only Contractor can record or modify payments
+      allow write: if isAuthenticated() && (
+        request.resource.data.contractorId == request.auth.uid ||
+        (resource != null && resource.data.contractorId == request.auth.uid)
+      );
+    }
+
+    // Join Requests Collection
+    match /joinRequests/{requestId} {
+      // Labour can create; Contractor and requesting Labour can read
+      allow create: if isAuthenticated() && request.resource.data.labourId == request.auth.uid;
+      allow read: if isAuthenticated() && (
+        resource.data.contractorId == request.auth.uid ||
+        resource.data.labourId == request.auth.uid
+      );
+      allow update: if isAuthenticated() && (
+        resource.data.contractorId == request.auth.uid ||
+        resource.data.labourId == request.auth.uid
+      );
+    }
+
+    // In-App Notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Labour Attendance Manager",
+  "description": "Complete contractor and labour attendance, project allocation, and wage payment management system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
